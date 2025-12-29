@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday Sameera! 🎂</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=VT323&display=swap" rel="stylesheet">
+    <!-- Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GLTFLoader -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            /* FALLBACK BACKGROUND: Deep Blue Night Sky Gradient */
+            background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
+            color: #ffcc00;
+            /* Warm yellow text */
+            font-family: 'Patrick Hand', cursive;
+        }
+
+        /* --- VIDEO BACKGROUND --- */
+        #bg-video {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: -2;
+            /* Behind everything */
+            object-fit: cover;
+            opacity: 0;
+            /* Hidden initially */
+            transition: opacity 2s ease;
+        }
+
+        /* Error message for video */
+        #video-error {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #ff6b6b;
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 5;
+            display: none;
+            text-align: center;
+        }
+
+        /* --- INTRO SCREEN (2D) --- */
+        #intro-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            transition: opacity 1.5s ease;
+        }
+
+        .left-content {
+            flex: 1;
+            text-align: right;
+            padding-right: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .right-content {
+            flex: 1;
+            padding-left: 50px;
+            display: flex;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            color: #ffdb58;
+            text-shadow: 0 0 10px rgba(255, 200, 0, 0.5);
+        }
+
+        .sub-text {
+            font-size: 2rem;
+            margin: 10px 0;
+            color: #ffa502;
+        }
+
+        /* GIF Cake (CSS) */
+        .gif-cake-container {
+            width: 250px;
+            height: 250px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .gif-cake-container:hover {
+            transform: scale(1.05);
+        }
+
+        .gif-cake {
+            width: 100%;
+            height: 100%;
+            background-image: url('Birthday Cake Pink Sticker.gif');
+            background-repeat: no-repeat;
+            background-size: contain;
+            background-position: center;
+        }
+
+        .cursor-pointer {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') no-repeat center/contain;
+            animation: pointerMove 2s infinite;
+            pointer-events: none;
+            top: 80%;
+            left: -20px;
+        }
+
+        @keyframes pointerMove {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            50% {
+                transform: translateX(10px);
+            }
+        }
+
+        /* --- 3D WORLD --- */
+        #world-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+
+        /* --- OVERLAYS --- */
+        #note-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: #fffbe7;
+            /* Paper color */
+            padding: 40px;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 5px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            color: #333;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s ease;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.4rem;
+            line-height: 1.6;
+            display: none;
+        }
+
+        #note-overlay.visible {
+            display: block;
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .signature {
+            margin-top: 30px;
+            text-align: right;
+            font-weight: bold;
+            color: #d63031;
+        }
+
+        #interaction-hint {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.2rem;
+            pointer-events: none;
+            z-index: 5;
+            display: none;
+        }
+
+        #loading-text {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: #555;
+            font-size: 0.8rem;
+        }
+
+        #attribution {
+            position: fixed;
+            bottom: 5px;
+            right: 10px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            z-index: 5;
+            text-decoration: none;
+            font-family: sans-serif;
+        }
+
+        #attribution a {
+            color: rgba(255, 255, 255, 0.5);
+            text-decoration: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Video Background -->
+    <!-- controls added for debugging, can be removed later -->
+    <video id="bg-video" autoplay muted loop playsinline preload="auto" controls>
+        <source src="animes1.mp4">
+    </video>
+
+    <div id="video-error">
+        <h3>Background Video Failed to Load</h3>
+        <p>It seems the browser cannot play this file format (.MOV) or the file is too large (700MB+).</p>
+        <p>Using CSS fallback background.</p>
+    </div>
+
+    <!-- Intro Screen (Matches Image) -->
+    <div id="intro-screen">
+        <div class="left-content">
+            <h1>Happy Birthday Sameera!! :)</h1>
+            <p class="sub-text">Click the Cake</p>
+            <p class="sub-text">And, Blow the candles out !</p>
+        </div>
+        <div class="right-content">
+            <div class="gif-cake-container" id="introCake">
+                <div class="cursor-pointer"></div>
+                <div class="gif-cake"></div>
+            </div>
+        </div>
+        <div id="loading-text">Preparing magic...</div>
+    </div>
+
+    <!-- 3D World Container -->
+    <div id="world-container"></div>
+    <div id="interaction-hint">Find the note on the table...</div>
+
+    <!-- Attribution -->
+    <div id="attribution">
+        <a href="https://www.vecteezy.com/free-videos/anime">Anime Stock Videos by Vecteezy</a>
+    </div>
+
+    <!-- Note Popup -->
+    <div id="note-overlay">
+        <div class="close-btn" onclick="closeNote()">x</div>
+        <p>I know you said not to get you anything so I made this instead.</p>
+        <br>
+        <p>I hope you have a wonderful day and hope school treats you well this semester. I know you'll do great
+            beautiful.</p>
+        <br>
+        <p class="signature">- Love, Rishi</p>
+    </div>
+
+    <script>
+        /* --- STATE MANAGEMENT --- */
+        let state = {
+            hasBlownCandles: false,
+            in3D: false
+        };
+
+        /* --- INTRO LOGIC --- */
+        const introScreen = document.getElementById('intro-screen');
+        const introCake = document.getElementById('introCake');
+        const bgVideo = document.getElementById('bg-video');
+        const videoErrorMsg = document.getElementById('video-error');
+
+        // Video Event Listeners for Debugging
+        bgVideo.addEventListener('error', (e) => {
+            console.error("Video Error:", e);
+            videoErrorMsg.style.display = 'block';
+        });
+
+        bgVideo.addEventListener('loadeddata', () => {
+            console.log("Video data loaded successfully!");
+        });
+
+        introCake.addEventListener('click', () => {
+            if (state.hasBlownCandles) return;
+            state.hasBlownCandles = true;
+
+            // Try playing
+            const playPromise = bgVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.then(_ => {
+                    console.log("Video started playing.");
+                })
+                    .catch(error => {
+                        console.error("Auto-play prevented/failed:", error);
+                    });
+            }
+
+            // "Blow out" effect
+            introCake.style.transform = "scale(1.1) rotate(5deg)";
+            setTimeout(() => introCake.style.transform = "scale(0) rotate(-10deg)", 200);
+
+            // Transition
+            setTimeout(() => {
+                introScreen.style.opacity = '0';
+
+                // Show Video
+                bgVideo.style.opacity = '1';
+
+                setTimeout(() => {
+                    introScreen.classList.add('hidden');
+                    init3D(); // Start 3D
+                }, 1500);
+            }, 500);
+        });
+
+
+        /* --- 3D WORLD LOGIC --- */
+        let scene, camera, renderer, controls;
+        let noteMesh;
+
+        function init3D() {
+            const container = document.getElementById('world-container');
+            container.style.opacity = '1';
+            document.getElementById('interaction-hint').style.display = 'block';
+            state.in3D = true;
+
+            // 1. Scene
+            scene = new THREE.Scene();
+            scene.background = null; // Transparent
+
+            // 2. Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 4, 12);
+
+            // 3. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            renderer.shadowMap.enabled = true;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            container.appendChild(renderer.domElement);
+
+            // 4. Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const moonLight = new THREE.DirectionalLight(0xffd700, 1.0);
+            moonLight.position.set(-20, 50, -20);
+            moonLight.castShadow = true;
+            scene.add(moonLight);
+
+            const candleLight = new THREE.PointLight(0xffaa00, 1.5, 15);
+            // Move candle light to follow the table which we will shift
+            candleLight.position.set(3.5, 3, 0);
+            scene.add(candleLight);
+
+            // --- 5. SCENE GROUP (Table + Objects) ---
+            const sceneGroup = new THREE.Group();
+            scene.add(sceneGroup);
+
+            // 🔥 SHIFT EVERYTHING RIGHT 🔥
+            // Position x=3.5 means it moves right. y=-1 moves it slightly down.
+            sceneGroup.position.set(3.5, -1, 0);
+
+            // 5a. Load Models (Cake)
+            const loader = new THREE.GLTFLoader();
+
+            loader.load('cake.glb', function (gltf) {
+                const cakeModel = gltf.scene;
+
+                const pivot = new THREE.Group();
+                pivot.position.set(0, 0.6, 0); // Table height (relative to group)
+                sceneGroup.add(pivot);
+
+                const box = new THREE.Box3().setFromObject(cakeModel);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+
+                // BIGGER SIZE (Scale Factor: 7.0)
+                const maxDim = Math.max(size.x, size.z);
+                const scaleFactor = 7.0 / maxDim;
+                cakeModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+                cakeModel.position.x = -center.x * scaleFactor;
+                cakeModel.position.y = -box.min.y * scaleFactor;
+                cakeModel.position.z = -center.z * scaleFactor;
+
+                pivot.add(cakeModel);
+
+            }, undefined, function (error) {
+                console.error('Error loading cake:', error);
+            });
+
+            // 5b. Create Table
+            const tableGeo = new THREE.CylinderGeometry(5, 5, 0.2, 64);
+            const tableMat = new THREE.MeshStandardMaterial({
+                color: 0x5d4037,
+                roughness: 0.6
+            });
+            const table = new THREE.Mesh(tableGeo, tableMat);
+            table.position.y = 0.5;
+            sceneGroup.add(table);
+
+            // Base/Leg
+            const legGeo = new THREE.CylinderGeometry(0.5, 2, 5, 16);
+            const leg = new THREE.Mesh(legGeo, tableMat);
+            leg.position.y = -2;
+            sceneGroup.add(leg);
+
+
+            // 5c. The Note (Glowing)
+            const noteGeo = new THREE.PlaneGeometry(1.5, 2);
+            // Emissive glow added
+            const noteMat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                side: THREE.DoubleSide,
+                emissive: 0xffffcc,
+                emissiveIntensity: 0.6
+            });
+            noteMesh = new THREE.Mesh(noteGeo, noteMat);
+            noteMesh.rotation.x = -Math.PI / 2;
+            noteMesh.rotation.z = 0.4;
+            // Position relative to the group center (which is now at 3.5, -1)
+            // Still on the table surface (y=0.61 relative to group)
+            noteMesh.position.set(3, 0.61, 1);
+            sceneGroup.add(noteMesh);
+
+            // 7. Controls (Fixed Zoom/Pan)
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.1;
+            // Ensure controls target looks at the new table position
+            controls.target.set(3.5, 0, 0);
+
+            // FIXED LOCATION
+            controls.enableZoom = false;
+            controls.enablePan = false;
+
+            // 8. Listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('click', on3DClick);
+
+            animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function on3DClick(event) {
+            if (!state.in3D) return;
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            for (let i = 0; i < intersects.length; i++) {
+                // Traverse up to find if we hit the note
+                let obj = intersects[i].object;
+                if (obj === noteMesh) {
+                    showNote();
+                    break;
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            renderer.render(scene, camera);
+        }
+
+        /* --- UI OVERLAY LOGIC --- */
+        const noteOverlay = document.getElementById('note-overlay');
+
+        function showNote() {
+            noteOverlay.classList.add('visible');
+        }
+
+        window.closeNote = function () {
+            noteOverlay.classList.remove('visible');
+        }
+    </script>
+</body>
